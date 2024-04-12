@@ -1,6 +1,4 @@
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use validator::Validate;
 
 pub struct HealthCheck {
   pub date_now: String,
