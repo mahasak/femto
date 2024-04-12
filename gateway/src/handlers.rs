@@ -7,22 +7,24 @@ use crate::{
 use axum::{
     body::Body,
     extract::State,
-    http::{header, HeaderName, Request, StatusCode},
+    http::{header, HeaderName, Request, Response as AxumResponse, StatusCode},
     routing::get,
     Router,
 };
 use axum_macros::{debug_handler, FromRef};
-use tower_http::cors::{Any, CorsLayer};
+use emit::{__emit_get_event_data, emit, info};
+use std::time::Duration;
+use tower_http::{
+    classify::ServerErrorsFailureClass,
+    cors::{Any, CorsLayer},
+};
 use tower_http::{
     compression::CompressionLayer, propagate_header::PropagateHeaderLayer,
     sensitive_headers::SetSensitiveHeadersLayer, trace,
 };
+use tower_http::request_id::{MakeRequestId, RequestId, SetRequestIdLayer};
+use tracing::Span;
 
-use tower_http::request_id::{
-    MakeRequestId, RequestId, SetRequestIdLayer,
-};
-
-// use http::header;
 #[derive(Clone, FromRef)]
 pub struct SharedState {
     pub(crate) database: Database,
@@ -49,8 +51,22 @@ pub fn router(database: Database, cache: Cache) -> Router {
         .layer(
             trace::TraceLayer::new_for_http()
                 .make_span_with(trace::DefaultMakeSpan::new().include_headers(true))
-                .on_request(trace::DefaultOnRequest::new().level(tracing::Level::INFO))
-                .on_response(trace::DefaultOnResponse::new().level(tracing::Level::INFO)),
+                .on_request(|_request: &Request<Body>, _span: &Span| {
+                    trace::DefaultOnRequest::new().level(tracing::Level::INFO);
+                })
+                .on_response(
+                    |_response: &AxumResponse<Body>, latency: Duration, _span: &Span| {
+                        let in_ms =
+                            latency.as_secs() * 1000 + latency.subsec_nanos() as u64 / 1_000_000;
+
+                        info!("response in ms: {}", response_time: in_ms);
+                    },
+                )
+                .on_failure(
+                    |error: ServerErrorsFailureClass, _latency: Duration, _span: &Span| {
+                        tracing::error!("error: {}", error);
+                    },
+                ),
         )
         .layer(SetRequestIdLayer::new(
             x_request_id.clone(),
