@@ -15,11 +15,13 @@ pub struct SharedState {
 
 #[debug_handler]
 pub async fn root() -> &'static str {
+    println!("root request");
     "Femto Server"
 }
 
 #[debug_handler]
 pub async fn healthcheck(State(state): State<SharedState>) -> Response<HealtCheckResponse> {
+    println!("health check request");
     let date_now = state.database.get_now().await?;
     let ping = state.cache.ping().await?;
     let health_check_response = HealthCheck::new(date_now, ping);

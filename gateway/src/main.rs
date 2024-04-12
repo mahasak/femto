@@ -31,8 +31,8 @@ async fn main() -> io::Result<()> {
 }
 
 pub async fn run(database: Database, cache: Cache) -> Result<(), Box<dyn Error>> {
-    // println!("{:?}", database);
-    // println!("{:?}", cache);
+    println!("{:?}", database);
+    println!("{:?}", cache);
     let app_environment = env::var("APP_ENVIRONMENT").unwrap_or("development".to_string());
     let app_host = env::var("APP_HOST").unwrap_or("0.0.0.0".to_string());
     let app_port = env::var("APP_PORT").unwrap_or("3000".to_string());

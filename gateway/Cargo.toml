@@ -30,6 +30,14 @@ bytes = "1.6.0"
 tracing = "0.1.40"
 mime = "0.3.17"
 
+[dev-dependencies]
+mockall = "0.11.3"
+tokio = { version = "1", features = ["macros"] }
+
+[[bin]]
+name = "femto"
+path = "src/main.rs"
+
 [profile.release]
 codegen-units = 1
 lto = true
