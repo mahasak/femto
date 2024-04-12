@@ -1,11 +1,15 @@
-use axum::{routing::get, Router};
 use cache::Cache;
 use database::Database;
 use dotenv::dotenv;
-use handlers::{healthcheck, SharedState};
+use emit::{__emit_get_event_data, emit, info};
+use emit::{
+    collectors::stdio::StdioCollector, formatters::text::PlainTextFormatter, PipelineBuilder,
+};
 use std::{env, error::Error, io};
 use tokio::net::TcpListener;
-use tower_http::cors::{Any, CorsLayer};
+use utils::emit_seq::SeqCollector;
+
+use crate::handlers::router;
 
 mod cache;
 mod database;
@@ -18,44 +22,53 @@ mod utils;
 async fn main() -> io::Result<()> {
     dotenv().ok();
     env_logger::init();
+    let server_url = env::var("SEQ_SERVER").expect("env::SEQ_SERVER is missing");
+    let api_key = env::var("SEQ_API_KEY").expect("env::SEQ_API_KEY is missing");
+    let server_api_url = format!("{server_url}/api/events/raw?clef");
+
+    let seq_builder = SeqCollector::builder()
+        .server_url(server_api_url)
+        .api_key(api_key);
+
+    let _flush = PipelineBuilder::new()
+        .write_to(StdioCollector::new(PlainTextFormatter::new()))
+        .send_to(seq_builder.build())
+        .init();
+
     let database = Database::init().await;
     let cache = Cache::init().await;
 
+    log::debug!("{:?}", database);
+    log::debug!("{:?}", cache);
+
     let result = run(database, cache).await;
+    info!("Successfully start server 1!", );
     if result.is_err() {
         log::error!("{}", result.unwrap_err().to_string());
         std::process::exit(1)
+    } else {
+      info!("Successfully start server !", );
     }
 
     Ok(())
 }
 
 pub async fn run(database: Database, cache: Cache) -> Result<(), Box<dyn Error>> {
-    println!("{:?}", database);
-    println!("{:?}", cache);
     let app_environment = env::var("APP_ENVIRONMENT").unwrap_or("development".to_string());
     let app_host = env::var("APP_HOST").unwrap_or("0.0.0.0".to_string());
     let app_port = env::var("APP_PORT").unwrap_or("3000".to_string());
-    println!("environment config: {}", app_environment);
-    println!("host config: {}", &app_host);
-    println!("port config: {}", &app_port);
-
-    let bind_address = app_host + ":" + &app_port;
+    let bind_address =format!("{app_host}:{app_port}");
     let listener = TcpListener::bind(&bind_address).await.unwrap();
 
-    println!("listening on {}", bind_address);
+    info!("environment config: {}", environment: app_environment);
+    info!("host config: {}", host: app_host);
+    info!("port config: {}", port: app_port);
+    info!("listening on {}", address :bind_address);
 
-    axum::serve(listener, app(database, cache).into_make_service())
+    axum::serve(listener, router(database, cache).into_make_service())
         .await
         .unwrap();
+
     Ok(())
 }
 
-pub fn app(database: Database, cache: Cache) -> Router {
-    let cors = CorsLayer::new().allow_origin(Any);
-    Router::new()
-        .route("/", get(handlers::root))
-        .route("/healthcheck", get(healthcheck))
-        .layer(cors)
-        .with_state(SharedState { database, cache })
-}
