@@ -25,6 +25,10 @@ validator = { version = "0.18.0", features = ["derive"] }
 chrono = { version = "0.4.37", features = ["serde"] }
 sqlx = { version = "0.7.4", features = [ "runtime-tokio","postgres", "time", "uuid", "tls-native-tls" ] }
 async-trait = "0.1.79"
+axum-macros = "0.4.1"
+bytes = "1.6.0"
+tracing = "0.1.40"
+mime = "0.3.17"
 
 [profile.release]
 codegen-units = 1
