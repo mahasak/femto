@@ -53,9 +53,9 @@ pub fn router(database: Database, cache: CacheService) -> Router {
     let x_request_id = HeaderName::from_static("x-request-id");
     Router::new()
         .route("/", get(root))
-        .route("/healthcheck", get(healthcheck))
-        .route("/applications", get(get_applications))
-        .route("/application", get(get_application))
+        .route("/healthcheck", get(healthcheck_handler))
+        .route("/applications", get(get_applications_handler))
+        .route("/application", get(get_application_handler))
         .route("/merchants", get(get_merchant_channels_handler))
         .route("/merchant", get(get_merchant_channel_handler))
         .route("/eligible", get(is_merchant_channel_eligible_handler))
@@ -103,7 +103,7 @@ pub async fn root(req: Request<Body>) -> &'static str {
 }
 
 #[debug_handler]
-pub async fn healthcheck(State(state): State<SharedState>) -> Response<HealtCheckResponse> {
+pub async fn healthcheck_handler(State(state): State<SharedState>) -> Response<HealtCheckResponse> {
     println!("health check request");
     let date_now = state.database.get_now().await?;
     let ping = state.cache.ping().await?;
@@ -118,7 +118,7 @@ pub async fn healthcheck(State(state): State<SharedState>) -> Response<HealtChec
 }
 
 #[debug_handler]
-pub async fn get_applications(
+pub async fn get_applications_handler(
     State(state): State<SharedState>,
 ) -> Response<Vec<ApplicationResponse>> {
     let apps = state.database.get_applications().await?;
@@ -136,7 +136,7 @@ pub async fn get_applications(
 }
 
 #[debug_handler]
-pub async fn get_application(
+pub async fn get_application_handler(
     State(state): State<SharedState>,
     Query(search): Query<SearchApplication>,
 ) -> Response<ApplicationResponse> {

@@ -69,7 +69,6 @@ pub async fn run(database: Database, cache: CacheService) -> Result<(), Box<dyn 
     info!("port config: {}", port: app_port);
     info!("listening on {}", address :bind_address);
 
-
     let app =  NormalizePathLayer::trim_trailing_slash().layer(router(database, cache.clone()));
     let app = ServiceExt::<Request>::into_make_service(app);
     axum::serve(listener, app)
