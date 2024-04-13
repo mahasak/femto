@@ -1,7 +1,10 @@
 use crate::{
     cache::Cache,
     database::Database,
-    models::health_check::{HealtCheckResponse, HealthCheck},
+    models::{
+        application::ApplicationResponse,
+        health_check::{HealtCheckResponse, HealthCheck},
+    },
     utils::custom_response::{CustomResponseBuilder, CustomResponseResult as Response},
 };
 use axum::{
@@ -14,6 +17,7 @@ use axum::{
 use axum_macros::{debug_handler, FromRef};
 use emit::{__emit_get_event_data, emit, info};
 use std::time::Duration;
+use tower_http::request_id::{MakeRequestId, RequestId, SetRequestIdLayer};
 use tower_http::{
     classify::ServerErrorsFailureClass,
     cors::{Any, CorsLayer},
@@ -22,7 +26,6 @@ use tower_http::{
     compression::CompressionLayer, propagate_header::PropagateHeaderLayer,
     sensitive_headers::SetSensitiveHeadersLayer, trace,
 };
-use tower_http::request_id::{MakeRequestId, RequestId, SetRequestIdLayer};
 use tracing::Span;
 
 #[derive(Clone, FromRef)]
@@ -48,6 +51,7 @@ pub fn router(database: Database, cache: Cache) -> Router {
     Router::new()
         .route("/", get(root))
         .route("/healthcheck", get(healthcheck))
+        .route("/applications", get(get_applications))
         .layer(
             trace::TraceLayer::new_for_http()
                 .make_span_with(trace::DefaultMakeSpan::new().include_headers(true))
@@ -102,5 +106,24 @@ pub async fn healthcheck(State(state): State<SharedState>) -> Response<HealtChec
         .body(res)
         .status_code(StatusCode::OK)
         .build();
+    Ok(res)
+}
+
+#[debug_handler]
+pub async fn get_applications(
+    State(state): State<SharedState>,
+) -> Response<Vec<ApplicationResponse>> {
+    println!("health check request");
+    let apps = state.database.get_applications().await?;
+    let apps = apps
+        .into_iter()
+        .map(Into::into)
+        .collect::<Vec<ApplicationResponse>>();
+
+    let res = CustomResponseBuilder::new()
+        .body(apps)
+        .status_code(StatusCode::OK)
+        .build();
+
     Ok(res)
 }

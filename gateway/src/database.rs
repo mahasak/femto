@@ -1,4 +1,4 @@
-use crate::errors::AppError;
+use crate::{errors::AppError, models::application::Application};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::env;
 
@@ -28,4 +28,20 @@ impl Database {
 
         Ok(date_now)
     }
+
+    pub async fn get_applications(&self) -> Result<Vec<Application>, AppError> {
+        let res = sqlx::query_as!(
+            Application,
+            "SELECT app_id, app_name, topic, enabled from application"
+        )
+        .fetch_all(&self.client)
+        .await
+        .expect("Error fetching application list");
+
+        Ok(res)
+    }
 }
+
+#[derive(Debug, thiserror::Error)]
+#[error("sqlx error: {0}")]
+pub struct DbError(#[from] sqlx::Error);
