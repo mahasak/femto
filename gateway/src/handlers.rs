@@ -59,6 +59,7 @@ pub fn router(database: Database, cache: CacheService) -> Router {
         .route("/merchants", get(get_merchant_channels_handler))
         .route("/merchant", get(get_merchant_channel_handler))
         .route("/eligible", get(is_merchant_channel_eligible_handler))
+        .route("/sequence", get(sequence_handler))
         .layer(
             trace::TraceLayer::new_for_http()
                 .make_span_with(trace::DefaultMakeSpan::new().include_headers(true))
@@ -238,4 +239,23 @@ pub async fn get_merchant_channel_handler(
         .build();
 
     Ok(res)
+}
+
+#[debug_handler]
+pub async fn sequence_handler(
+    State(state): State<SharedState>,
+    Query(search): Query<SearchApplication>,
+) -> Response<String> {
+    let result = if let Some(id) = &search.id {
+        state.database.get_sequence(&id.to_string()).await?
+    } else {
+        0
+    };
+
+    let result = CustomResponseBuilder::new()
+        .body(result.to_string())
+        .status_code(StatusCode::OK)
+        .build();
+
+    Ok(result)
 }

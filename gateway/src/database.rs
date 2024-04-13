@@ -134,6 +134,28 @@ impl Database {
     pub async fn flush_eligible(&self) {
         self.eligibility.invalidate_all();
     }
+
+    pub async fn get_sequence(&self, id: &str) -> Result<i32, AppError> {
+        let mut tx = self.client.begin().await?;
+
+        sqlx::query!("SELECT * FROM sequencers WHERE name = $1 FOR UPDATE", id)
+            .fetch_one(&mut *tx)
+            .await?;
+
+        sqlx::query!("UPDATE sequencers SET data = data + 1 WHERE name = $1", id)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+
+        let res = sqlx::query!("SELECT data from sequencers where name = $1", id)
+            .fetch_one(&self.client)
+            .await
+            .expect("Error fetching merchant channel by id");
+        let seq = res.data;
+
+        Ok(seq)
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
