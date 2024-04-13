@@ -1,6 +1,6 @@
 use axum::ServiceExt;
 use axum::extract::Request;
-use cache::Cache;
+use cache::CacheService;
 use database::Database;
 use dotenv::dotenv;
 use emit::{__emit_get_event_data, emit, info};
@@ -40,7 +40,7 @@ async fn main() -> io::Result<()> {
         .init();
 
     let database = Database::init().await;
-    let cache = Cache::init().await;
+    let cache = CacheService::init().await;
 
     log::debug!("{:?}", database);
     log::debug!("{:?}", cache);
@@ -57,7 +57,7 @@ async fn main() -> io::Result<()> {
     Ok(())
 }
 
-pub async fn run(database: Database, cache: Cache) -> Result<(), Box<dyn Error>> {
+pub async fn run(database: Database, cache: CacheService) -> Result<(), Box<dyn Error>> {
     let app_environment = env::var("APP_ENVIRONMENT").unwrap_or("development".to_string());
     let app_host = env::var("APP_HOST").unwrap_or("0.0.0.0".to_string());
     let app_port = env::var("APP_PORT").unwrap_or("3000".to_string());

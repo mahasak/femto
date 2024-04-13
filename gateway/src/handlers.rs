@@ -1,9 +1,12 @@
 use crate::{
-    cache::Cache,
+    cache::CacheService,
     database::Database,
     errors::AppError,
     models::{
-        application::ApplicationResponse, health_check::{HealtCheckResponse, HealthCheck}, merchant_channel::{MerchantChannelEligbleResponse, MerchantChannelResponse}, search_application::SearchApplication
+        application::ApplicationResponse,
+        health_check::{HealtCheckResponse, HealthCheck},
+        merchant_channel::{MerchantChannelEligbleResponse, MerchantChannelResponse},
+        search_application::SearchApplication,
     },
     utils::custom_response::{CustomResponseBuilder, CustomResponseResult as Response},
 };
@@ -31,7 +34,7 @@ use tracing::Span;
 #[derive(Clone, FromRef)]
 pub struct SharedState {
     pub(crate) database: Database,
-    pub(crate) cache: Cache,
+    pub(crate) cache: CacheService,
 }
 
 #[derive(Clone, Default)]
@@ -45,7 +48,7 @@ impl MakeRequestId for MyMakeRequestId {
     }
 }
 
-pub fn router(database: Database, cache: Cache) -> Router {
+pub fn router(database: Database, cache: CacheService) -> Router {
     let cors = CorsLayer::new().allow_origin(Any);
     let x_request_id = HeaderName::from_static("x-request-id");
     Router::new()
@@ -89,7 +92,6 @@ pub fn router(database: Database, cache: Cache) -> Router {
         )))
         .layer(cors)
         .with_state(SharedState { database, cache })
-      
 }
 
 #[debug_handler]
@@ -165,15 +167,36 @@ pub async fn is_merchant_channel_eligible_handler(
     State(state): State<SharedState>,
     Query(search): Query<SearchApplication>,
 ) -> Response<MerchantChannelEligbleResponse> {
-    let result = if let Some(id) = &search.id {
-        state.database.is_merchant_channel_eligible(id.to_string()).await?
+    let cache_result = if let Some(id) = &search.id {
+        let cache_result = state.cache.is_eligible(id).await;
+        match cache_result {
+            Some(_) => println!("cache hit"),
+            None => println!("cache missed")
+        }
+        cache_result
     } else {
-        false
+        None
+    };
+
+    let result = match cache_result {
+        Some(cache_result) => cache_result,
+        None => {
+            if let Some(id) = &search.id {
+                let db_result = state
+                    .database
+                    .is_merchant_channel_eligible(id.to_string())
+                    .await?;
+                state.cache.set_eligible(id, db_result).await;
+                db_result
+            } else {
+                false
+            }
+        }
     };
 
     let id = match search.id {
-      Some(search) => search,
-      None => "n/a".to_string()
+        Some(search) => search,
+        None => "n/a".to_string(),
     };
 
     let res = MerchantChannelEligbleResponse {
