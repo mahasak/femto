@@ -20,14 +20,14 @@ use axum::{
 use axum_macros::{debug_handler, FromRef};
 use emit::{__emit_get_event_data, emit, info};
 use std::time::Duration;
-use tower_http::request_id::{MakeRequestId, RequestId, SetRequestIdLayer};
 use tower_http::{
     classify::ServerErrorsFailureClass,
+    compression::CompressionLayer,
     cors::{Any, CorsLayer},
-};
-use tower_http::{
-    compression::CompressionLayer, propagate_header::PropagateHeaderLayer,
-    sensitive_headers::SetSensitiveHeadersLayer, trace,
+    propagate_header::PropagateHeaderLayer,
+    request_id::{MakeRequestId, RequestId, SetRequestIdLayer},
+    sensitive_headers::SetSensitiveHeadersLayer,
+    trace,
 };
 use tracing::Span;
 
@@ -168,12 +168,10 @@ pub async fn is_merchant_channel_eligible_handler(
     Query(search): Query<SearchApplication>,
 ) -> Response<MerchantChannelEligbleResponse> {
     let result = if let Some(id) = &search.id {
-        let db_result = state
+        state
             .database
             .is_merchant_channel_eligible(id.to_string())
-            .await?;
-        state.cache.set_eligible(id, db_result).await;
-        db_result
+            .await?
     } else {
         false
     };

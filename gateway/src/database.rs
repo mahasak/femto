@@ -128,11 +128,11 @@ impl Database {
     }
 
     pub async fn remove_eligible(&self, id: &str) {
-      self.eligibility.invalidate(id).await;
+        self.eligibility.invalidate(id).await;
     }
 
     pub async fn flush_eligible(&self) {
-      self.eligibility.invalidate_all();
+        self.eligibility.invalidate_all();
     }
 }
 
