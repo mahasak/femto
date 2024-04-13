@@ -1,12 +1,14 @@
 use crate::{
     errors::AppError, models::application::Application, models::merchant_channel::MerchantChannel,
 };
+use moka::future::Cache;
 use sqlx::{postgres::PgPoolOptions, PgPool};
-use std::env;
+use std::{env, time::Duration};
 
 #[derive(Clone, Debug)]
 pub struct Database {
     client: PgPool,
+    eligibility: Cache<String, bool>,
 }
 
 impl Database {
@@ -17,7 +19,16 @@ impl Database {
             .connect(&database_url)
             .await
             .expect("Unable to connect to database");
-        Database { client }
+        let eligibility: Cache<String, bool> = Cache::builder()
+            .max_capacity(10_000) // Max 10,000 entries
+            .time_to_live(Duration::from_secs(30 * 60)) // Time to live (TTL): 30 minutes
+            .time_to_idle(Duration::from_secs(5 * 60)) // Time to idle (TTI):  5 minutes
+            .build();
+
+        Database {
+            client,
+            eligibility,
+        }
     }
 
     pub async fn get_now(&self) -> Result<String, AppError> {
@@ -85,20 +96,43 @@ impl Database {
     }
 
     pub async fn is_merchant_channel_eligible(&self, ref_id: String) -> Result<bool, AppError> {
-        let res = sqlx::query!(
-            "SELECT COUNT(*) from merchant_channel where ref_id = $1",
-            ref_id
-        )
-        .fetch_one(&self.client)
-        .await
-        .expect("Error fetching merchant channel by id");
-        let count = res.count;
+        let cache_result = self.eligibility.get(&ref_id).await;
 
-        let eligible = match count {
-            Some(count) => count > 0,
-            None => false,
+        let eligible = match cache_result {
+            Some(cache_result) => {
+                println!("cache hit");
+                cache_result
+            }
+            None => {
+                println!("cache missed");
+                let res = sqlx::query!(
+                    "SELECT COUNT(*) from merchant_channel where ref_id = $1",
+                    ref_id
+                )
+                .fetch_one(&self.client)
+                .await
+                .expect("Error fetching merchant channel by id");
+                let count = res.count;
+
+                let eligible = match count {
+                    Some(count) => count > 0,
+                    None => false,
+                };
+                self.eligibility.insert(ref_id.to_string(), eligible).await;
+
+                eligible
+            }
         };
+
         Ok(eligible)
+    }
+
+    pub async fn remove_eligible(&self, id: &str) {
+      self.eligibility.invalidate(id).await;
+    }
+
+    pub async fn flush_eligible(&self) {
+      self.eligibility.invalidate_all();
     }
 }
 

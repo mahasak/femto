@@ -167,31 +167,15 @@ pub async fn is_merchant_channel_eligible_handler(
     State(state): State<SharedState>,
     Query(search): Query<SearchApplication>,
 ) -> Response<MerchantChannelEligbleResponse> {
-    let cache_result = if let Some(id) = &search.id {
-        let cache_result = state.cache.is_eligible(id).await;
-        match cache_result {
-            Some(_) => println!("cache hit"),
-            None => println!("cache missed")
-        }
-        cache_result
+    let result = if let Some(id) = &search.id {
+        let db_result = state
+            .database
+            .is_merchant_channel_eligible(id.to_string())
+            .await?;
+        state.cache.set_eligible(id, db_result).await;
+        db_result
     } else {
-        None
-    };
-
-    let result = match cache_result {
-        Some(cache_result) => cache_result,
-        None => {
-            if let Some(id) = &search.id {
-                let db_result = state
-                    .database
-                    .is_merchant_channel_eligible(id.to_string())
-                    .await?;
-                state.cache.set_eligible(id, db_result).await;
-                db_result
-            } else {
-                false
-            }
-        }
+        false
     };
 
     let id = match search.id {
