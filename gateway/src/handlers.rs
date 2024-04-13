@@ -3,9 +3,7 @@ use crate::{
     database::Database,
     errors::AppError,
     models::{
-        application::ApplicationResponse,
-        health_check::{HealtCheckResponse, HealthCheck},
-        search_application::SearchApplication,
+        application::ApplicationResponse, health_check::{HealtCheckResponse, HealthCheck}, merchant_channel::{MerchantChannelEligbleResponse, MerchantChannelResponse}, search_application::SearchApplication
     },
     utils::custom_response::{CustomResponseBuilder, CustomResponseResult as Response},
 };
@@ -55,6 +53,9 @@ pub fn router(database: Database, cache: Cache) -> Router {
         .route("/healthcheck", get(healthcheck))
         .route("/applications", get(get_applications))
         .route("/application", get(get_application))
+        .route("/merchants", get(get_merchant_channels_handler))
+        .route("/merchant", get(get_merchant_channel_handler))
+        .route("/eligible", get(is_merchant_channel_eligible_handler))
         .layer(
             trace::TraceLayer::new_for_http()
                 .make_span_with(trace::DefaultMakeSpan::new().include_headers(true))
@@ -153,6 +154,81 @@ pub async fn get_application(
 
     let res = CustomResponseBuilder::new()
         .body(app)
+        .status_code(StatusCode::OK)
+        .build();
+
+    Ok(res)
+}
+
+#[debug_handler]
+pub async fn is_merchant_channel_eligible_handler(
+    State(state): State<SharedState>,
+    Query(search): Query<SearchApplication>,
+) -> Response<MerchantChannelEligbleResponse> {
+    let result = if let Some(id) = &search.id {
+        state.database.is_merchant_channel_eligible(id.to_string()).await?
+    } else {
+        false
+    };
+
+    let id = match search.id {
+      Some(search) => search,
+      None => "n/a".to_string()
+    };
+
+    let res = MerchantChannelEligbleResponse {
+        ref_id: id,
+        eligible: result,
+    };
+
+    let res = CustomResponseBuilder::new()
+        .body(res)
+        .status_code(StatusCode::OK)
+        .build();
+
+    Ok(res)
+}
+
+#[debug_handler]
+pub async fn get_merchant_channels_handler(
+    State(state): State<SharedState>,
+) -> Response<Vec<MerchantChannelResponse>> {
+    let channels = state.database.get_merchant_channels().await?;
+    let channels = channels
+        .into_iter()
+        .map(Into::into)
+        .collect::<Vec<MerchantChannelResponse>>();
+
+    let res = CustomResponseBuilder::new()
+        .body(channels)
+        .status_code(StatusCode::OK)
+        .build();
+
+    Ok(res)
+}
+
+#[debug_handler]
+pub async fn get_merchant_channel_handler(
+    State(state): State<SharedState>,
+    Query(search): Query<SearchApplication>,
+) -> Response<MerchantChannelResponse> {
+    println!("{:?}", search);
+    let channel = if let Some(id) = &search.id {
+        state.database.get_merchant_channel(id.to_string()).await?
+    } else {
+        None
+    };
+
+    let channel = match channel {
+        Some(channel) => MerchantChannelResponse::from(channel),
+        None => {
+            info!("Application not found, returning 404 status code",);
+            return Err(AppError::not_found());
+        }
+    };
+
+    let res = CustomResponseBuilder::new()
+        .body(channel)
         .status_code(StatusCode::OK)
         .build();
 
