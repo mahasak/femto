@@ -19,6 +19,7 @@ use axum::{
 };
 use axum_macros::{debug_handler, FromRef};
 use emit::{__emit_get_event_data, emit, info};
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tower_http::{
     classify::ServerErrorsFailureClass,
@@ -60,6 +61,7 @@ pub fn router(database: Database, cache: CacheService) -> Router {
         .route("/merchant", get(get_merchant_channel_handler))
         .route("/eligible", get(is_merchant_channel_eligible_handler))
         .route("/sequence", get(sequence_handler))
+        .route("/messenger_webhook", get(messenger_webhook_handler))
         .layer(
             trace::TraceLayer::new_for_http()
                 .make_span_with(trace::DefaultMakeSpan::new().include_headers(true))
@@ -258,4 +260,46 @@ pub async fn sequence_handler(
         .build();
 
     Ok(result)
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct MessengerVerifysubscriptionParam {
+    #[serde(alias = "hub.mode")]
+    pub hub_mode: Option<String>,
+    #[serde(alias = "hub.verify_token")]
+    pub hub_verify_token: Option<String>,
+    #[serde(alias = "hub.challenge")]
+    pub hub_challenge: Option<String>,
+}
+
+#[debug_handler]
+pub async fn messenger_webhook_handler(
+    Query(query): Query<MessengerVerifysubscriptionParam>,
+) -> String {
+    let verify_token = match query.hub_verify_token {
+        Some(token) => token,
+        None => {
+            return "No verify token".to_string();
+        }
+    };
+
+    let hub_mode = match query.hub_mode {
+        Some(mode) => mode,
+        None => {
+            return "No hub mode".to_string();
+        }
+    };
+
+    let hub_challenge = match query.hub_challenge {
+        Some(challenge) => challenge,
+        None => {
+            return "No hub challenge".to_string();
+        }
+    };
+
+    if hub_mode == "subscribe" && verify_token == "ITISAGOODDAYTODIE" {
+        return hub_challenge.to_string();
+    } else {
+        return "Veirification failed".to_string();
+    }
 }
