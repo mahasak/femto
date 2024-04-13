@@ -1,15 +1,17 @@
 use crate::{
     cache::Cache,
     database::Database,
+    errors::AppError,
     models::{
         application::ApplicationResponse,
         health_check::{HealtCheckResponse, HealthCheck},
+        search_application::SearchApplication,
     },
     utils::custom_response::{CustomResponseBuilder, CustomResponseResult as Response},
 };
 use axum::{
     body::Body,
-    extract::State,
+    extract::{Query, State},
     http::{header, HeaderName, Request, Response as AxumResponse, StatusCode},
     routing::get,
     Router,
@@ -52,6 +54,7 @@ pub fn router(database: Database, cache: Cache) -> Router {
         .route("/", get(root))
         .route("/healthcheck", get(healthcheck))
         .route("/applications", get(get_applications))
+        .route("/application", get(get_application))
         .layer(
             trace::TraceLayer::new_for_http()
                 .make_span_with(trace::DefaultMakeSpan::new().include_headers(true))
@@ -85,6 +88,7 @@ pub fn router(database: Database, cache: Cache) -> Router {
         )))
         .layer(cors)
         .with_state(SharedState { database, cache })
+      
 }
 
 #[debug_handler]
@@ -113,7 +117,6 @@ pub async fn healthcheck(State(state): State<SharedState>) -> Response<HealtChec
 pub async fn get_applications(
     State(state): State<SharedState>,
 ) -> Response<Vec<ApplicationResponse>> {
-    println!("health check request");
     let apps = state.database.get_applications().await?;
     let apps = apps
         .into_iter()
@@ -122,6 +125,34 @@ pub async fn get_applications(
 
     let res = CustomResponseBuilder::new()
         .body(apps)
+        .status_code(StatusCode::OK)
+        .build();
+
+    Ok(res)
+}
+
+#[debug_handler]
+pub async fn get_application(
+    State(state): State<SharedState>,
+    Query(search): Query<SearchApplication>,
+) -> Response<ApplicationResponse> {
+    println!("{:?}", search);
+    let app = if let Some(id) = &search.id {
+        state.database.get_application(id.to_string()).await?
+    } else {
+        None
+    };
+
+    let app = match app {
+        Some(app) => ApplicationResponse::from(app),
+        None => {
+            info!("Application not found, returning 404 status code",);
+            return Err(AppError::not_found());
+        }
+    };
+
+    let res = CustomResponseBuilder::new()
+        .body(app)
         .status_code(StatusCode::OK)
         .build();
 

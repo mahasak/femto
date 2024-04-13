@@ -1,3 +1,5 @@
+use axum::ServiceExt;
+use axum::extract::Request;
 use cache::Cache;
 use database::Database;
 use dotenv::dotenv;
@@ -7,6 +9,8 @@ use emit::{
 };
 use std::{env, error::Error, io};
 use tokio::net::TcpListener;
+use tower_http::normalize_path::NormalizePathLayer;
+use tower_layer::Layer;
 use utils::emit_seq::SeqCollector;
 
 use crate::handlers::router;
@@ -65,7 +69,10 @@ pub async fn run(database: Database, cache: Cache) -> Result<(), Box<dyn Error>>
     info!("port config: {}", port: app_port);
     info!("listening on {}", address :bind_address);
 
-    axum::serve(listener, router(database, cache).into_make_service())
+
+    let app =  NormalizePathLayer::trim_trailing_slash().layer(router(database, cache.clone()));
+    let app = ServiceExt::<Request>::into_make_service(app);
+    axum::serve(listener, app)
         .await
         .unwrap();
 

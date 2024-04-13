@@ -40,6 +40,19 @@ impl Database {
 
         Ok(res)
     }
+
+    pub async fn get_application(&self, app_id: String) -> Result<Option<Application>, AppError> {
+        let res = sqlx::query_as!(
+            Application,
+            "SELECT app_id, app_name, topic, enabled from application WHERE app_id = $1",
+            app_id
+        )
+        .fetch_optional(&self.client)
+        .await
+        .expect("Error fetching application by id");
+
+        Ok(res)
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
