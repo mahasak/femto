@@ -12,18 +12,18 @@ pub struct MessengerVerifysubscription {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Serialize, Default, Deserialize)]
 pub struct Sender {
     id: String,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Serialize, Default, Deserialize)]
 pub struct Receipient {
     id: String,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Serialize, Default, Deserialize)]
 pub struct QuickReplyPayload {
     payload: String,
 }
@@ -36,7 +36,7 @@ impl QuickReplyPayload {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Serialize, Default, Deserialize)]
 pub struct Message {
     text: Option<String>,
     quick_reply: Option<QuickReplyPayload>,
@@ -53,7 +53,7 @@ impl Message {
     }
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Serialize, Default, Deserialize)]
 pub struct Postback {
     payload: String,
 }
@@ -66,27 +66,27 @@ impl MessagePostback {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DeliveryInfo {
     mids: Vec<String>,
     watermark: Number,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ReadInfo {
     watermark: Number,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct AccountLinkingInfo {
     status: String,
     authorization_code: String,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Messaging {
     sender: Sender,
     postback: Option<MessagePostback>,
@@ -100,23 +100,24 @@ pub struct Messaging {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WebhookEntry {
     id: String,
     time: Number,
     messaging: Option<Vec<Messaging>>,
+    #[serde(flatten)]
     changes: Option<Vec<ChangesEvent>>,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ChangesEvent {
     field: String,
     value: Option<ChangeEventValue>,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ChangeEventValue {
     page_id: String,            //Generic field
     invoice_id: Option<String>, // P2M invoice field
@@ -128,14 +129,14 @@ pub struct ChangeEventValue {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PaymentAmount {
     amount: String,
     currency: String,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PaymentInfo {
     payment_amount: String,
     payment_method: String,
@@ -147,7 +148,7 @@ pub struct PaymentInfo {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PaymentMetadata {
     image_url: Option<String>,
     bank_transfer_id: Option<String>,
@@ -162,20 +163,20 @@ pub struct PaymentMetadata {
     sender_name: Option<String>,
     sender_bank_account_id: Option<String>,
     sender_bank_code: Option<String>,
-    hpp_payment_link: Option<HppMetadata>
+    hpp_payment_link: Option<HppMetadata>,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct HppMetadata {
-  psp_txn_id: String,
-  payment_status: String,
-  payment_provider: String,
-  updated_time: String
+    psp_txn_id: String,
+    payment_status: String,
+    payment_provider: String,
+    updated_time: String,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct BankSlipValidationInfo {
     payment_amount: PaymentAmount,
     payment_time: String,
@@ -185,21 +186,21 @@ pub struct BankSlipValidationInfo {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WrappedMessage {
     trace_id: String,
     page_entry: WebhookEntry,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MessengerWebhook {
     object: String,
     entry: Vec<WebhookEntry>,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MessagePostback {
     payload: String,
 }

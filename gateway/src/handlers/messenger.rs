@@ -56,10 +56,11 @@ async fn messenger_get_handler(
 #[debug_handler]
 async fn messenger_post_handler(
     State(_state): State<SharedState>,
-    _payload: Option<Json<MessengerWebhook>>,
+    Json(payload): Json<MessengerWebhook>,
 ) -> String {
     println!("receive message");
     let version = env!("CARGO_PKG_VERSION");
-    dbg!(Some(_payload));
+    //dbg!(Some(_payload));
+    dbg!(payload);
     version.to_string()
 }
