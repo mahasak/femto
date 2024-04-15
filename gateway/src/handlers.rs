@@ -10,16 +10,19 @@ use crate::{
     },
     utils::custom_response::{CustomResponseBuilder, CustomResponseResult as Response},
 };
+use axum::response::IntoResponse;
 use axum::{
-    body::Body,
-    extract::{Query, State},
+    body::{Body, Bytes},
+    extract::{Json, Query, State},
     http::{header, HeaderName, Request, Response as AxumResponse, StatusCode},
-    routing::get,
+    routing::{get, on, post, MethodFilter},
     Router,
 };
 use axum_macros::{debug_handler, FromRef};
 use emit::{__emit_get_event_data, emit, info};
+use hyper::body;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::time::Duration;
 use tower_http::{
     classify::ServerErrorsFailureClass,
@@ -61,11 +64,19 @@ pub fn router(database: Database, cache: CacheService) -> Router {
         .route("/merchant", get(get_merchant_channel_handler))
         .route("/eligible", get(is_merchant_channel_eligible_handler))
         .route("/sequence", get(sequence_handler))
-        .route("/messenger_webhook", get(messenger_webhook_handler))
+        .route(
+            "/webhook/messenger",
+            // on(MethodFilter::GET | MethodFilter::POST, messenger_webhook_handler)messenger_verify_subscription_handler
+            post(messenger_webhook_handler).get(messenger_verify_subscription_handler),
+        )
         .layer(
             trace::TraceLayer::new_for_http()
                 .make_span_with(trace::DefaultMakeSpan::new().include_headers(true))
                 .on_request(|_request: &Request<Body>, _span: &Span| {
+                    println!("request: {}", _request.uri());
+                    println!("method: {}", _request.method());
+                    println!("method: {:#?}", _request.headers());
+                    println!("body: {:?}", _request.body().clone());
                     trace::DefaultOnRequest::new().level(tracing::Level::INFO);
                 })
                 .on_response(
@@ -78,6 +89,7 @@ pub fn router(database: Database, cache: CacheService) -> Router {
                 )
                 .on_failure(
                     |error: ServerErrorsFailureClass, _latency: Duration, _span: &Span| {
+                        println!("error");
                         tracing::error!("error: {}", error);
                     },
                 ),
@@ -273,7 +285,7 @@ pub struct MessengerVerifysubscriptionParam {
 }
 
 #[debug_handler]
-pub async fn messenger_webhook_handler(
+pub async fn messenger_verify_subscription_handler(
     Query(query): Query<MessengerVerifysubscriptionParam>,
 ) -> String {
     let verify_token = match query.hub_verify_token {
@@ -298,8 +310,100 @@ pub async fn messenger_webhook_handler(
     };
 
     if hub_mode == "subscribe" && verify_token == "ITISAGOODDAYTODIE" {
-        return hub_challenge.to_string();
+        (hub_challenge.to_string())
     } else {
-        return "Veirification failed".to_string();
+        ("Veirification failed".to_string())
     }
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct Sender {
+    id: String,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct QuickReplyPayload {
+    payload: String,
+}
+
+impl QuickReplyPayload {
+    pub fn get_payload(&self) -> &String {
+        &self.payload
+    }
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct Message {
+    text: Option<String>,
+    quick_reply: Option<QuickReplyPayload>,
+}
+
+impl Message {
+    pub fn get_text(&self) -> String {
+        self.text.clone().unwrap_or_default()
+    }
+
+    pub fn get_quick_reply(&self) -> Option<QuickReplyPayload> {
+        self.quick_reply.clone()
+    }
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct Postback {
+    payload: String,
+}
+
+impl MessagePostback {
+    pub fn get_payload(&self) -> &String {
+        &self.payload
+    }
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct Messaging {
+    sender: Sender,
+    postback: Option<MessagePostback>,
+    message: Option<Message>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Entry {
+    messaging: Vec<Messaging>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct InComingData {
+    object: String,
+    entry: Vec<Entry>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MessagePostback {
+    payload: String,
+}
+
+impl Postback {
+    pub fn get_payload(&self) -> &String {
+        &self.payload
+    }
+}
+
+#[debug_handler]
+pub async fn messenger_webhook_handler(_payload: Option<Json<InComingData>>) -> String {
+    println!("receive message");
+    // let (req_parts, req_body) = req.into_parts();
+    // let body = req.body();
+    // // dbg!(req_parts);
+    // // dbg!(req_body);
+    // let bytes = buffer_and_print("request", path, body, true).await?;
+    // dbg!(body);
+    let version = env!("CARGO_PKG_VERSION");
+    dbg!(Some(_payload));
+    let response = json!({
+        "data": {
+            "version": version,
+        },
+        "message": "Service is running..."
+    });
+    (version.to_string())
 }
