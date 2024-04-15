@@ -7,11 +7,11 @@ use axum::{
 };
 use axum_macros::debug_handler;
 
-use crate::{handlers::state::SharedState, models::messenger_webhook::InComingData};
+use crate::{handlers::state::SharedState, models::messenger_webhook::MessengerWebhook};
 
 use axum::extract::Query;
 
-use crate::models::messenger_webhook::MessengerVerifysubscriptionParam;
+use crate::models::messenger_webhook::MessengerVerifysubscription;
 
 pub fn create_route() -> Router<SharedState> {
     Router::new()
@@ -22,7 +22,7 @@ pub fn create_route() -> Router<SharedState> {
 #[debug_handler]
 async fn messenger_get_handler(
     State(_state): State<SharedState>,
-    Query(query): Query<MessengerVerifysubscriptionParam>,
+    Query(query): Query<MessengerVerifysubscription>,
 ) -> String {
     let fb_verify_token = env::var("FACEBOOK_WEBHOOK_VERIFY_TOKEN").expect("env::FACEBOOK_WEBHOOK_VERIFY_TOKEN is missing");
     let verify_token = match query.hub_verify_token {
@@ -56,7 +56,7 @@ async fn messenger_get_handler(
 #[debug_handler]
 async fn messenger_post_handler(
     State(_state): State<SharedState>,
-    _payload: Option<Json<InComingData>>,
+    _payload: Option<Json<MessengerWebhook>>,
 ) -> String {
     println!("receive message");
     let version = env!("CARGO_PKG_VERSION");

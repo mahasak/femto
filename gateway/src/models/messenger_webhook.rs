@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Number;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct MessengerVerifysubscriptionParam {
+pub struct MessengerVerifysubscription {
     #[serde(alias = "hub.mode")]
     pub hub_mode: Option<String>,
     #[serde(alias = "hub.verify_token")]
@@ -13,6 +14,12 @@ pub struct MessengerVerifysubscriptionParam {
 #[allow(dead_code)]
 #[derive(Debug, Default, Deserialize)]
 pub struct Sender {
+    id: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Default, Deserialize)]
+pub struct Receipient {
     id: String,
 }
 
@@ -59,24 +66,136 @@ impl MessagePostback {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Deserialize)]
+pub struct DeliveryInfo {
+    mids: Vec<String>,
+    watermark: Number,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct ReadInfo {
+    watermark: Number,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct AccountLinkingInfo {
+    status: String,
+    authorization_code: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
 pub struct Messaging {
     sender: Sender,
     postback: Option<MessagePostback>,
     message: Option<Message>,
+    delivery: Option<DeliveryInfo>,
+    read: Option<ReadInfo>,
+    account_linking: Option<AccountLinkingInfo>,
+    recipient: Receipient,
+    reaction: Option<String>,
+    timestamp: Number,
 }
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
-pub struct Entry {
-    messaging: Vec<Messaging>,
+pub struct WebhookEntry {
+    id: String,
+    time: Number,
+    messaging: Option<Vec<Messaging>>,
+    changes: Option<Vec<ChangesEvent>>,
 }
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
-pub struct InComingData {
+pub struct ChangesEvent {
+    field: String,
+    value: Option<ChangeEventValue>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct ChangeEventValue {
+    page_id: String,            //Generic field
+    invoice_id: Option<String>, // P2M invoice field
+    media_id: Option<String>,   // P2M Bankslip field
+    buyer_id: Option<String>,   // P2M Bankslip field
+    timestamp: Number,
+    event: Option<String>,
+    payment: Option<PaymentInfo>, // P2M Bankslip field
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct PaymentAmount {
+    amount: String,
+    currency: String,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct PaymentInfo {
+    payment_amount: String,
+    payment_method: String,
+    creation_time: Number,
+    buyer_id: String,
+    order_id: Option<String>,
+    payment_id: String,
+    metadata: Option<PaymentMetadata>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct PaymentMetadata {
+    image_url: Option<String>,
+    bank_transfer_id: Option<String>,
+    media_id: Option<String>,
+    amount_validated: Option<PaymentAmount>,
+    transaction_time: Option<Number>,
+    validation_info: Option<BankSlipValidationInfo>,
+    validation_status: Option<String>,
+    receiver_name: Option<String>,
+    receiver_bank_account_id: Option<String>,
+    receiver_bank_code: Option<String>,
+    sender_name: Option<String>,
+    sender_bank_account_id: Option<String>,
+    sender_bank_code: Option<String>,
+    hpp_payment_link: Option<HppMetadata>
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct HppMetadata {
+  psp_txn_id: String,
+  payment_status: String,
+  payment_provider: String,
+  updated_time: String
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct BankSlipValidationInfo {
+    payment_amount: PaymentAmount,
+    payment_time: String,
+    is_seller_onboarded: bool,
+    matches_seller_account: bool,
+    is_duplicate: bool,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct WrappedMessage {
+    trace_id: String,
+    page_entry: WebhookEntry,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+pub struct MessengerWebhook {
     object: String,
-    entry: Vec<Entry>,
+    entry: Vec<WebhookEntry>,
 }
 
 #[allow(dead_code)]
