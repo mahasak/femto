@@ -1,7 +1,8 @@
+//use is_empty::IsEmpty;
 use serde::{Deserialize, Serialize};
 use serde_json::Number;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Clone, Deserialize, Debug)]
 pub struct MessengerVerifysubscription {
     #[serde(alias = "hub.mode")]
     pub hub_mode: Option<String>,
@@ -12,20 +13,20 @@ pub struct MessengerVerifysubscription {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Default, Deserialize)]
+#[derive(Debug, Clone, Serialize, Default, Deserialize)]
 pub struct Sender {
-    id: String,
+    pub id: String,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Default, Deserialize)]
+#[derive(Debug, Clone, Serialize, Default, Deserialize)]
 pub struct Receipient {
-    id: String,
+    pub id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Default, Deserialize)]
 pub struct QuickReplyPayload {
-    payload: String,
+    pub payload: String,
 }
 
 #[allow(dead_code)]
@@ -36,10 +37,11 @@ impl QuickReplyPayload {
 }
 
 #[allow(dead_code)]
+#[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Default, Deserialize)]
 pub struct Message {
-    text: Option<String>,
-    quick_reply: Option<QuickReplyPayload>,
+    pub text: Option<String>,
+    pub quick_reply: Option<QuickReplyPayload>,
 }
 
 #[allow(dead_code)]
@@ -55,7 +57,7 @@ impl Message {
 
 #[derive(Debug, Clone, Serialize, Default, Deserialize)]
 pub struct Postback {
-    payload: String,
+    pub payload: String,
 }
 
 #[allow(dead_code)]
@@ -66,143 +68,147 @@ impl MessagePostback {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DeliveryInfo {
-    mids: Vec<String>,
-    watermark: Number,
+    pub mids: Vec<String>,
+    pub watermark: Number,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ReadInfo {
-    watermark: Number,
+    pub watermark: Number,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AccountLinkingInfo {
-    status: String,
-    authorization_code: String,
+    pub status: String,
+    pub authorization_code: String,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[serde_with::skip_serializing_none]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Messaging {
-    sender: Sender,
-    postback: Option<MessagePostback>,
-    message: Option<Message>,
-    delivery: Option<DeliveryInfo>,
-    read: Option<ReadInfo>,
-    account_linking: Option<AccountLinkingInfo>,
-    recipient: Receipient,
-    reaction: Option<String>,
-    timestamp: Number,
+    pub sender: Sender,
+    pub postback: Option<MessagePostback>,
+    pub message: Option<Message>,
+    pub delivery: Option<DeliveryInfo>,
+    pub read: Option<ReadInfo>,
+    pub account_linking: Option<AccountLinkingInfo>,
+    pub recipient: Receipient,
+    pub reaction: Option<String>,
+    pub timestamp: Number,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[serde_with::skip_serializing_none]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WebhookEntry {
-    id: String,
-    time: Number,
-    messaging: Option<Vec<Messaging>>,
-    #[serde(flatten)]
-    changes: Option<Vec<ChangesEvent>>,
+    pub id: String,
+    pub time: Number,
+    pub messaging: Option<Vec<Messaging>>,
+    pub changes: Option<Vec<ChangesEvent>>,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ChangesEvent {
-    field: String,
-    value: Option<ChangeEventValue>,
+    pub field: String,
+    pub value: Option<ChangeEventValue>,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[serde_with::skip_serializing_none]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ChangeEventValue {
-    page_id: String,            //Generic field
-    invoice_id: Option<String>, // P2M invoice field
-    media_id: Option<String>,   // P2M Bankslip field
-    buyer_id: Option<String>,   // P2M Bankslip field
-    timestamp: Number,
-    event: Option<String>,
-    payment: Option<PaymentInfo>, // P2M Bankslip field
+    pub page_id: String,            //Generic field
+    pub invoice_id: Option<String>, // P2M invoice field
+    pub media_id: Option<String>,   // P2M Bankslip field
+    pub buyer_id: Option<String>,   // P2M Bankslip field
+    pub timestamp: Number,
+    pub event: Option<String>,
+    pub payment: Option<PaymentInfo>, // P2M Bankslip field
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PaymentAmount {
-    amount: String,
-    currency: String,
+    pub amount: String,
+    pub currency: String,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[serde_with::skip_serializing_none]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PaymentInfo {
-    payment_amount: String,
-    payment_method: String,
-    creation_time: Number,
-    buyer_id: String,
-    order_id: Option<String>,
-    payment_id: String,
-    metadata: Option<PaymentMetadata>,
+    pub payment_amount: String,
+    pub payment_method: String,
+    pub creation_time: Number,
+    pub buyer_id: String,
+    pub order_id: Option<String>,
+    pub payment_id: String,
+    pub metadata: Option<PaymentMetadata>,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[serde_with::skip_serializing_none]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PaymentMetadata {
-    image_url: Option<String>,
-    bank_transfer_id: Option<String>,
-    media_id: Option<String>,
-    amount_validated: Option<PaymentAmount>,
-    transaction_time: Option<Number>,
-    validation_info: Option<BankSlipValidationInfo>,
-    validation_status: Option<String>,
-    receiver_name: Option<String>,
-    receiver_bank_account_id: Option<String>,
-    receiver_bank_code: Option<String>,
-    sender_name: Option<String>,
-    sender_bank_account_id: Option<String>,
-    sender_bank_code: Option<String>,
-    hpp_payment_link: Option<HppMetadata>,
+    pub image_url: Option<String>,
+    pub bank_transfer_id: Option<String>,
+    pub media_id: Option<String>,
+    pub amount_validated: Option<PaymentAmount>,
+    pub transaction_time: Option<Number>,
+    pub validation_info: Option<BankSlipValidationInfo>,
+    pub validation_status: Option<String>,
+    pub receiver_name: Option<String>,
+    pub receiver_bank_account_id: Option<String>,
+    pub receiver_bank_code: Option<String>,
+    pub sender_name: Option<String>,
+    pub sender_bank_account_id: Option<String>,
+    pub sender_bank_code: Option<String>,
+    pub hpp_payment_link: Option<HppMetadata>,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HppMetadata {
-    psp_txn_id: String,
-    payment_status: String,
-    payment_provider: String,
-    updated_time: String,
+    pub psp_txn_id: String,
+    pub payment_status: String,
+    pub payment_provider: String,
+    pub updated_time: String,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BankSlipValidationInfo {
-    payment_amount: PaymentAmount,
-    payment_time: String,
-    is_seller_onboarded: bool,
-    matches_seller_account: bool,
-    is_duplicate: bool,
+    pub payment_amount: PaymentAmount,
+    pub payment_time: String,
+    pub is_seller_onboarded: bool,
+    pub matches_seller_account: bool,
+    pub is_duplicate: bool,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WrappedMessage {
-    trace_id: String,
-    page_entry: WebhookEntry,
+    pub trace_id: String,
+    pub page_entry: WebhookEntry,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MessengerWebhook {
-    object: String,
-    entry: Vec<WebhookEntry>,
+    pub object: String,
+    pub entry: Vec<WebhookEntry>,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MessagePostback {
-    payload: String,
+    pub payload: String,
 }
 
 #[allow(dead_code)]

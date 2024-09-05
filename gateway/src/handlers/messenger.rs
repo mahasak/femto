@@ -60,7 +60,25 @@ async fn messenger_post_handler(
 ) -> String {
     println!("receive message");
     let version = env!("CARGO_PKG_VERSION");
-    //dbg!(Some(_payload));
-    dbg!(payload);
+    // dbg!(Some(_payload));
+    // dbg!(serde_json::to_string(&payload).await);
+    let debug_obj = payload.clone();
+    let object = payload.object;
+    //let page_id = Some(payload.entry);
+
+    
+    // match  payload.entry {
+    //   Some(entry) => println!("{:?}", entry),
+    //   None => println!("Not match")
+    // }
+
+    println!("{:?}", serde_json::to_string(&debug_obj).unwrap());
+
+    println!("{:?}", object);
+
+    payload.entry.iter().for_each(|entry| {
+      println!("{:?}", entry);
+    });
+    // println!("{:?}", page_id);
     version.to_string()
 }

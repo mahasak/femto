@@ -44,6 +44,8 @@ http-body-util = "0.1.1"
 reqwest = {version = "0.12.3",  features = ["blocking"]}
 tower-layer = "0.3.2"
 moka = { version = "0.12.6", features = ["sync", "future"] }
+serde_with = "3.7.0"
+is_empty = "0.2.0"
 
 [dev-dependencies]
 mockall = "0.11.3"
