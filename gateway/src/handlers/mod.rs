@@ -42,16 +42,17 @@ pub fn router(database: Database, cache: CacheService) -> Router {
             trace::TraceLayer::new_for_http()
                 .make_span_with(trace::DefaultMakeSpan::new().include_headers(true))
                 .on_request(|_request: &Request<Body>, _span: &Span| {
-                    println!("request: {}", _request.uri());
+                    println!("request id : ,request: {}", _request.uri());
                     println!("method: {}", _request.method());
-                    println!("method: {:#?}", _request.headers());
+                    println!("headers: {:#?}", _request.headers());
+                    info!("requested URL: {}", url: _request.uri().to_string());
                     trace::DefaultOnRequest::new().level(tracing::Level::INFO);
                 })
                 .on_response(
                     |_response: &AxumResponse<Body>, latency: Duration, _span: &Span| {
                         let in_ms =
                             latency.as_secs() * 1000 + latency.subsec_nanos() as u64 / 1_000_000;
-
+                        println!("headers: {:#?}", _response.headers());
                         info!("response in ms: {}", response_time: in_ms);
                     },
                 )
