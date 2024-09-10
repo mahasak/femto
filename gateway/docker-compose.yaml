@@ -5,7 +5,7 @@ services:
     build:
       context: .
       # customize this dockerfile as needed
-      dockerfile: ./Dockerfile
+      dockerfile: Dockerfile-old
     volumes:
       - .:/code
       # a data volume backs this directory so you can install whatever 

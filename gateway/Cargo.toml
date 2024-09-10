@@ -52,7 +52,7 @@ mockall = "0.13.0"
 tokio = { version = "1", features = ["macros"] }
 
 [[bin]]
-name = "femto"
+name = "femto-gateway"
 path = "src/main.rs"
 
 [profile.release]
