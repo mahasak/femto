@@ -113,10 +113,7 @@ pub async fn is_merchant_channel_eligible_handler(
         false
     };
 
-    let id = match search.id {
-        Some(search) => search,
-        None => "n/a".to_string(),
-    };
+    let id = search.id.unwrap_or_else(|| "n/a".to_string());
 
     let res = MerchantChannelEligbleResponse {
         ref_id: id,
@@ -195,3 +192,5 @@ pub async fn sequence_handler(
 
     Ok(result)
 }
+
+

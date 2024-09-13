@@ -1,15 +1,19 @@
 use crate::{cache::CacheService, database::Database, handlers::state::SharedState};
 use axum::{
     body::Body,
-    http::{header, Request, Response as AxumResponse},
+    http::{header,Method, Request, Response as AxumResponse},
     Router,
 };
 use emit::{__emit_get_event_data, emit, error, info};
 use std::time::Duration;
-use axum::http::{Method};
 use tower_request_id::{RequestId, RequestIdLayer};
-use tower_http::{classify::ServerErrorsFailureClass, compression::CompressionLayer, cors::{Any, CorsLayer}, sensitive_headers::SetSensitiveHeadersLayer};
-use tower_http::trace::TraceLayer;
+use tower_http::{
+    classify::ServerErrorsFailureClass,
+    compression::CompressionLayer,
+    cors::{Any, CorsLayer},
+    sensitive_headers::SetSensitiveHeadersLayer,
+    trace::TraceLayer
+};
 use tracing::Span;
 use context::{RequestContext};
 use crate::handlers::context::context_middleware;

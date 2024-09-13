@@ -2,12 +2,13 @@ use crate::{
     errors::AppError, models::application::Application, models::merchant_channel::MerchantChannel,
 };
 use moka::future::Cache;
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use sqlx::{postgres::PgPoolOptions, query, PgPool};
 use std::{env, time::Duration};
+use crate::models::merchant_config::MerchantConfig;
 
 #[derive(Clone, Debug)]
 pub struct Database {
-    client: PgPool,
+    pub client: PgPool,
     eligibility: Cache<String, bool>,
 }
 
@@ -92,6 +93,22 @@ impl Database {
         .await
         .expect("Error fetching merchant channel by id");
 
+        Ok(res)
+    }
+
+    pub async fn get_merchant_config(&self, page_id: String) -> Result<Option<MerchantConfig>, AppError> {
+        let res = sqlx::query_as!(
+            MerchantConfig,
+            r#"select a.id as channel_id, b.app_id as "app_id!", c.topic as topic, c.enabled, a.token
+                from merchant_channel a
+                left join application_registry b
+                on a.id = b.channel_id
+                left join public.application c on b.app_id= c.id where ref_id = $1
+            "#, page_id
+            ).fetch_optional(&self.client)
+            .await
+            .expect("Error fetching merchant channel by id");
+    
         Ok(res)
     }
 
