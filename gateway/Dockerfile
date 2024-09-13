@@ -24,8 +24,6 @@ RUN useradd -ms /bin/bash app
 USER app
 WORKDIR /app
 
-COPY .env /app
-
 # Copy from the previous build
 COPY --from=build /build/target/release/femto-gateway /app
 
