@@ -8,9 +8,9 @@ use emit::{__emit_get_event_data, emit, info};
 use std::time::Duration;
 use axum::http::{Method};
 use tower_request_id::{RequestId, RequestIdLayer};
-use tower_http::{classify::ServerErrorsFailureClass, compression::CompressionLayer, cors::{Any, CorsLayer}, sensitive_headers::SetSensitiveHeadersLayer, trace};
-use tower_http::trace::{TraceLayer};
-use tracing::{Level, Span};
+use tower_http::{classify::ServerErrorsFailureClass, compression::CompressionLayer, cors::{Any, CorsLayer}, sensitive_headers::SetSensitiveHeadersLayer};
+use tower_http::trace::TraceLayer;
+use tracing::Span;
 use context::{RequestContext};
 use crate::handlers::context::context_middleware;
 
@@ -24,40 +24,25 @@ pub fn router(database: Database, cache: CacheService) -> Router {
         .layer(SetSensitiveHeadersLayer::new(std::iter::once(
             header::AUTHORIZATION,
         )))
-
         .layer(get_cors_layer())
         .merge(self::api::create_route())
         .merge(self::messenger::create_route())
         .layer(axum::middleware::from_fn(context_middleware))
         .layer(
             TraceLayer::new_for_http()
-                .make_span_with(|request: &Request<Body>| {
-                    let request_id = uuid::Uuid::new_v4();
-                    println!("request id: {}", request_id);
-                    tracing::span!(
-                          Level::DEBUG,
-                          "request",
-                          method = tracing::field::display(request.method()),
-                          uri = tracing::field::display(request.uri()),
-                          version = tracing::field::debug(request.version()),
-                          request_id = tracing::field::display(request_id)
-                      )
-                })
-                .on_request(|_request: &Request<Body>, _span: &Span| {
-                    let trace_id = _request.extensions().get::<RequestId>().unwrap();
-                    info!("requested URL: {}", url: _request.uri().to_string());
-                    info!("requested ID: {}", request_id: trace_id.to_string());
-
-                    trace::DefaultOnRequest::new().level(tracing::Level::INFO);
+                .on_request(|request: &Request<Body>, _span: &Span| {
+                    let trace_id = request.extensions().get::<RequestId>().unwrap();
+                    info!("on requested: URL: {}", url: request.uri().to_string());
+                    info!("on requested: requested ID: {}", request_id: trace_id.to_string());
                 })
                 .on_response(
-                    |_response: &AxumResponse<Body>, latency: Duration, _span: &Span| {
+                    |response: &AxumResponse<Body>, latency: Duration, _span: &Span| {
                         let in_ms =
                             latency.as_secs() * 1000 + latency.subsec_nanos() as u64 / 1_000_000;
-                        let request_context = _response.extensions().get::<RequestContext>().unwrap();
-                        info!("response in ms: {}", response_time: in_ms);
-                        info!("request URI : {} ", request_uri: request_context.uri.to_string());
-                        info!("request ID : {} ", request_id: request_context.request_id);
+                        let request_context = response.extensions().get::<RequestContext>().unwrap();
+                        info!("on response: response in ms: {}", response_time: in_ms);
+                        info!("on response: request URI : {} ", request_uri: request_context.uri.to_string());
+                        info!("on response: request ID : {} ", request_id: request_context.request_id);
                     },
                 )
                 .on_failure(
