@@ -4,7 +4,7 @@ use axum::{
     http::{header, Request, Response as AxumResponse},
     Router,
 };
-use emit::{__emit_get_event_data, emit, info};
+use emit::{__emit_get_event_data, emit, error, info};
 use std::time::Duration;
 use axum::http::{Method};
 use tower_request_id::{RequestId, RequestIdLayer};
@@ -32,23 +32,19 @@ pub fn router(database: Database, cache: CacheService) -> Router {
             TraceLayer::new_for_http()
                 .on_request(|request: &Request<Body>, _span: &Span| {
                     let trace_id = request.extensions().get::<RequestId>().unwrap();
-                    info!("on requested: URL: {}", url: request.uri().to_string());
-                    info!("on requested: requested ID: {}", request_id: trace_id.to_string());
+                    info!("incoming request, request ID {}, URL: {},", request_id: trace_id.to_string(), url: request.uri().to_string());
                 })
                 .on_response(
                     |response: &AxumResponse<Body>, latency: Duration, _span: &Span| {
                         let in_ms =
                             latency.as_secs() * 1000 + latency.subsec_nanos() as u64 / 1_000_000;
                         let request_context = response.extensions().get::<RequestContext>().unwrap();
-                        info!("on response: response in ms: {}", response_time: in_ms);
-                        info!("on response: request URI : {} ", request_uri: request_context.uri.to_string());
-                        info!("on response: request ID : {} ", request_id: request_context.request_id);
+                        info!("request processed in ms {}, request ID {}, URL: {}", response_time: in_ms, request_id: request_context.request_id, request_uri: request_context.uri.to_string());
                     },
                 )
                 .on_failure(
                     |error: ServerErrorsFailureClass, _latency: Duration, _span: &Span| {
-                        println!("error");
-                        tracing::error!("error: {}", error);
+                        error!("server error, error: {}", error: error.to_string());
                     },
                 ),
         )
