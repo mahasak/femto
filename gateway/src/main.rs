@@ -3,7 +3,7 @@ use axum::extract::Request;
 use cache::CacheService;
 use database::Database;
 use dotenv::dotenv;
-use emit::{__emit_get_event_data, debug, emit, info};
+use emit::{__emit_get_event_data, emit, info};
 use emit::{
     collectors::stdio::StdioCollector, formatters::text::PlainTextFormatter, PipelineBuilder,
 };
