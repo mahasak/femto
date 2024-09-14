@@ -1,5 +1,5 @@
 use std::env;
-
+use redis::{Commands};
 use crate::errors::AppError;
 
 #[derive(Clone, Debug)]
@@ -19,5 +19,11 @@ impl CacheService {
         let mut con = self.redis.get_multiplexed_async_connection().await?;
         let pong: String = redis::cmd("PING").query_async(&mut con).await?;
         Ok(pong)
+    }
+
+    pub async fn publish(&self, topic: String, value: String) -> Result<(), AppError> {
+        let mut conn = self.redis.clone().get_connection()?;
+        let _:() = conn.publish(topic, value)?;
+        Ok(())
     }
 }

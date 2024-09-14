@@ -2,8 +2,10 @@ use crate::{
     errors::AppError, models::application::Application, models::merchant_channel::MerchantChannel,
 };
 use moka::future::Cache;
-use sqlx::{postgres::PgPoolOptions, query, PgPool};
+use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::{env, time::Duration};
+
+use emit::{__emit_get_event_data, emit, info};
 use crate::models::merchant_config::MerchantConfig;
 
 #[derive(Clone, Debug)]
@@ -108,27 +110,28 @@ impl Database {
             ).fetch_optional(&self.client)
             .await
             .expect("Error fetching merchant channel by id");
-    
+
         Ok(res)
     }
 
     pub async fn is_merchant_channel_eligible(&self, ref_id: String) -> Result<bool, AppError> {
-        let cache_result = self.eligibility.get(&ref_id).await;
+        let cache_result = self.eligibility.get(&ref_id.to_string()).await;
 
         let eligible = match cache_result {
             Some(cache_result) => {
-                println!("cache hit");
+                info!("Page ID {}, cache hit={}, cache hit" , page_id: ref_id, cache_result: 1);
                 cache_result
             }
             None => {
-                println!("cache missed");
+                info!("Page ID {}, cache hit={}, cache missed", page_id: ref_id, cache_result: 0);
                 let res = sqlx::query!(
-                    "SELECT COUNT(*) from merchant_channel where ref_id = $1",
-                    ref_id
-                )
-                .fetch_one(&self.client)
-                .await
-                .expect("Error fetching merchant channel by id");
+                        "SELECT COUNT(*) from merchant_channel where ref_id = $1",
+                        ref_id
+                    )
+                    .fetch_one(&self.client)
+                    .await
+                    .expect("Error fetching merchant channel by id");
+
                 let count = res.count;
 
                 let eligible = match count {

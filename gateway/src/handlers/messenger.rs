@@ -1,22 +1,15 @@
 use std::env;
 use axum::{
-    async_trait,
-    extract::{FromRef, FromRequest, FromRequestParts, Query},
-    http::{request::Parts, Request},
+    extract::Query,
     routing::{get, post},
-    Extension, Router, RequestExt,Json,
-    response::{IntoResponse, Response}
+    Router, Json,
     };
 use axum::extract::State;
 use axum_macros::debug_handler;
-use sqlx::{postgres::PgPoolOptions, query, PgPool};
-use crate::{handlers::state::SharedState, models::messenger_webhook::MessengerWebhook};
 
-use serde_json::json;
-use tracing::field::debug;
-use emit::{__emit_get_event_data, emit, error, info, debug};
-use tower_request_id::RequestId;
-use crate::handlers::context::RequestContext;
+
+use emit::{__emit_get_event_data, emit, info};
+use crate::{handlers::state::SharedState, models::messenger_webhook::MessengerWebhook};
 use crate::models::messenger_webhook::MessengerVerifysubscription;
 
 pub fn create_route() -> Router<SharedState> {
@@ -58,83 +51,58 @@ async fn messenger_get_handler(
         "Veirification failed".to_string()
     }
 }
-struct MyExtractor<T> {
-    request_id: RequestId,
-    payload: T,
-}
+
 #[debug_handler]
 async fn messenger_post_handler(
     State(state): State<SharedState>,
     Json(payload): Json<MessengerWebhook>,
 
 ) -> String {
-    let debug_obj = payload.clone();
-    let json = serde_json::to_string(&debug_obj).unwrap();
-    info!("receiving message: {}", webhook_payload: json);
 
-    let object = payload.object;
+    let work_payload = payload.clone();
+    let object = work_payload.object;
     //let page_id = Some(payload.   entry);
 
     if object == "page" {
-        let page_id = payload.entry[0].id.clone();
 
-        let eligible = state
-            .database
-            .is_merchant_channel_eligible(page_id.clone())
-            .await.unwrap();
+        for entry in work_payload.entry.iter() {
+            let page_id = entry.id.clone();
+            let eligible = state
+                .database
+                .is_merchant_channel_eligible(page_id.clone())
+                .await.unwrap();
 
-        if eligible {
-            info!("Page ID {} is eligible", page_id: page_id.clone());
+            if eligible {
+                info!("Eligibility: {}, Page ID {} is eligible", eligible: eligible, page_id: page_id.clone());
 
-            let app_config = state.database.get_merchant_config(page_id.clone()).await.unwrap();
-            match  app_config {
-                Some(app_config) => {
-                    println!("{:#?}", app_config);
+                let app_config = state.database.get_merchant_config(page_id.clone()).await.unwrap();
+                match  app_config {
+                    Some(app_config) => {
+                        info!("Page {} configuration, topic: {}, app_id: {}, enabled: {}",
+                            page_id: page_id,
+                            topic: app_config.topic,
+                            app_id: app_config.app_id,
+                            enabled: app_config.enabled);
+                        let json_payload = payload.clone();
+                        let json_str = serde_json::to_string(&json_payload).unwrap();
+                        info!("receiving message: {}", webhook_payload: json_str);
+                        let _ = state.cache.publish(app_config.topic, json_str).await.unwrap();
+                    }
+                    None => {
+                        info!("No merchant config for page ID {} not found", page_id: page_id);
+                    }
                 }
-                None => {}
-            }
-
-//             let query = query!(r#"select a.id as channel_id, b.app_id as "app_id!", c.topic, c.enabled, a.token
-// from merchant_channel a
-// inner join application_registry b on a.id = b.channel_id
-// inner join public.application c on b.app_id= c.id where ref_id = $1
-// "#, page_id.clone()).fetch_one(&state.database.client).await.unwrap();
-//             println!("{:#?}", query);
-
-            let app = if let Some(id) = Some(page_id.clone()) {
-                println!("{:#}", id.to_string());
-                state.database.get_application(id.to_string()).await.unwrap()
             } else {
-                None
-            };
-
-            match app {
-                Some(app) => {
-                    info!("Handler for page_id {} is topic {}", page_id: page_id.clone(), topic: app.topic);
-
-                },
-                None => {
-                    info!("Application not found, returning 404 status code",);
-                }
-            };
-
-
+                info!("Eligibility: {}, Page ID {} is NOT eligible", eligible: eligible, page_id: page_id.clone());
+            }
         }
+    } else {
+        info!("Received non-page object, Got {}", object: object);
     }
 
-    
-    // match  payload.entry {
-    //   Some(entry) => println!("{:?}", entry),
-    //   None => println!("Not match")
-    // }
+    // println!("{:?}", serde_json::to_string(&debug_obj).unwrap());
 
-    println!("{:?}", serde_json::to_string(&debug_obj).unwrap());
 
-    println!("{:?}", object);
-
-    payload.entry.iter().for_each(|entry| {
-      println!("{:?}", entry);
-    });
 
     "{\"success\":true}".to_string()
 }
