@@ -3,7 +3,7 @@ use axum::extract::Request;
 use cache::CacheService;
 use database::Database;
 use dotenv::dotenv;
-use emit::{__emit_get_event_data, emit, info};
+use emit::{__emit_get_event_data, debug, emit, info};
 use emit::{
     collectors::stdio::StdioCollector, formatters::text::PlainTextFormatter, PipelineBuilder,
 };
@@ -42,11 +42,7 @@ async fn main() -> io::Result<()> {
     let database = Database::init().await;
     let cache = CacheService::init().await;
 
-    log::debug!("{:?}", database);
-    log::debug!("{:?}", cache);
-
     let result = run(database, cache).await;
-    info!("Successfully start server 1!", );
     if result.is_err() {
         log::error!("{}", result.unwrap_err().to_string());
         std::process::exit(1)
