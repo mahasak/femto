@@ -48,6 +48,12 @@ serde_with = "3.7.0"
 is_empty = "0.2.0"
 tower = { version = "0.5.1", features = ["full"] }
 tower-request-id = "0.3.0"
+slog = "2.7.0"
+hostname = "0.4.0"
+slog-async = "2.8.0"
+slog-gelf = "0.1.2"
+logstash-rs = "0.1.0"
+slog-term = "2.9.1"
 
 [dev-dependencies]
 mockall = "0.13.0"

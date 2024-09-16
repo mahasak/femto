@@ -6,6 +6,7 @@ use axum::{
 };
 use emit::{__emit_get_event_data, emit, error, info};
 use std::time::Duration;
+use slog::Logger;
 use tower_request_id::{RequestId, RequestIdLayer};
 use tower_http::{
     classify::ServerErrorsFailureClass,
@@ -23,7 +24,7 @@ pub mod messenger;
 pub mod state;
 mod context;
 
-pub fn router(database: Database, cache: CacheService) -> Router {
+pub fn router(database: Database, cache: CacheService, logger: Logger) -> Router {
     Router::new()
         .layer(SetSensitiveHeadersLayer::new(std::iter::once(
             header::AUTHORIZATION,
@@ -54,7 +55,7 @@ pub fn router(database: Database, cache: CacheService) -> Router {
         )
         .layer(RequestIdLayer)
         .layer(CompressionLayer::new())
-        .with_state(SharedState { database, cache })
+        .with_state(SharedState { database, cache, logger })
 }
 
 fn get_cors_layer() -> CorsLayer {
